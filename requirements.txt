@@ -1,0 +1,16 @@
+# Runtime dependencies for Playlist Downloader.
+# Everything else (HTTP server, UI) is Python's standard library.
+#
+# yt-dlp          - the download engine, used as a library
+# mutagen         - writes tags + cover art into mp3/m4a/flac/opus
+# yt-dlp-ejs      - local JavaScript challenge solver. YouTube requires a JS
+#                   runtime for many videos; without this, downloads fail with
+#                   "HTTP Error 403: Forbidden". It also needs one JS runtime
+#                   installed (deno, node, bun or quickjs).
+# rapidfuzz       - fast fuzzy string matching for the folder-vs-playlist
+#                   compare. Without it the app falls back to difflib, which is
+#                   correct but ~50x slower on 1,500-track playlists.
+yt-dlp>=2025.1.1
+yt-dlp-ejs>=0.8.0
+mutagen>=1.47.0
+rapidfuzz>=3.9.0

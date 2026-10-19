@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------- Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+
+# Virtualenvs (the bundled runtime is built at package time, never committed)
+.venv/
+venv/
+env/
+
+# ------------------------------------------------------- build / packaging
+build/
+dist/
+*.app/
+*.dmg
+*.icns
+
+# ------------------------------------------------------------- macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# ------------------------------------------- app runtime / user data
+*.db
+*.db-shm
+*.db-wal
+*.log
+download-archive.txt
+
+# ------------------------------------------------------------- editors
+.vscode/
+.idea/
+*.swp
