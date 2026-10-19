@@ -152,6 +152,12 @@ stderr when launching the binary directly.
 
 ## Using it
 
+> **New here?** The app has a built-in **step-by-step guided tour** — press
+> **❓ How to use** in the top-right corner of the window (it also plays
+> automatically the first time you open the app). Prefer to read? There's a full
+> written walkthrough with screenshots-free instructions in
+> **[docs/TUTORIAL.md](docs/TUTORIAL.md)**.
+
 1. **Add a playlist.** Paste a YouTube / YouTube Music / Spotify URL, pick a
    text file, or point at a local music folder.
 2. **Review the tracks.** Everything is listed with its resolved metadata.
@@ -248,6 +254,7 @@ scripts/
   bundle_python.py                 builds the self-contained CPython runtime
   make_dmg.sh                      builds the .app and the .dmg
   make_icon.py                     generates the app icon
+docs/            TUTORIAL.md — end-user walkthrough
 tests/           test_core.py self-check suite
 playlist_downloader.spec   optional PyInstaller spec (single-file binary)
 ```

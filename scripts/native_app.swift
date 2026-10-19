@@ -375,10 +375,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         winMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
         NSApp.windowsMenu = winMenu
 
+        let helpItem = NSMenuItem()
+        main.addItem(helpItem)
+        let help = NSMenu(title: "Help")
+        helpItem.submenu = help
+        help.addItem(withTitle: "How to Use \(appName)",
+                     action: #selector(showTour), keyEquivalent: "?")
+        help.addItem(.separator())
+        help.addItem(withTitle: "User Guide (online)",
+                     action: #selector(openGuide), keyEquivalent: "")
+
         NSApp.mainMenu = main
     }
 
     @objc private func reloadPage() { webView.reload() }
+
+    /// Opens the built-in guided tour (web/tour.js) from the Help menu.
+    @objc private func showTour() {
+        webView?.evaluateJavaScript("window.startTour && window.startTour()", completionHandler: nil)
+    }
+
+    /// Opens the written walkthrough in the default browser.
+    @objc private func openGuide() {
+        if let url = URL(string: "https://github.com/brianbcyang27-prog/playlist-downloader/blob/main/docs/TUTORIAL.md") {
+            NSWorkspace.shared.open(url)
+        }
+    }
 
     @objc private func zoomReset() { webView.pageZoom = 1.0 }
     @objc private func zoomIn() { webView.pageZoom = min(webView.pageZoom + 0.1, 3.0) }
