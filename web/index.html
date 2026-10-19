@@ -213,6 +213,7 @@
         </label>
         <button class="ghost" id="btn-reveal">Open folder</button>
       </div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="set-make_playlist_subfolder"> Put a multi-track playlist in its own folder (named after the playlist)</label>
     </div>
 
     <div class="card" id="card-music">
@@ -348,6 +349,27 @@
     <div class="modal-foot">
       <button class="ghost" id="modal-up">↑ Up</button>
       <button class="primary" id="modal-pick">Choose this folder</button>
+    </div>
+  </div>
+</div>
+
+<div id="dest-modal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head"><h3>Where should these go?</h3><button class="ghost" id="dest-close">✕</button></div>
+    <div class="modal-body">
+      <label class="field">
+        <span>Save to folder</span>
+        <div class="row">
+          <input id="dest-path" type="text" spellcheck="false" placeholder="~/Downloads/Playlist Downloader">
+          <button class="ghost" id="dest-choose">Choose…</button>
+        </div>
+      </label>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="dest-subfolder"> Put a multi-track playlist in its own folder</label>
+      <p class="hint" id="dest-preview"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" id="dest-cancel">Cancel</button>
+      <button class="primary" id="dest-go">Start download</button>
     </div>
   </div>
 </div>

@@ -44,7 +44,7 @@ That's it. Everything below is detail.
 
 ### macOS
 
-1. Open **`Playlist Downloader 1.0.1.dmg`**.
+1. Open **`Playlist Downloader 1.2.dmg`**.
 2. Drag **Playlist Downloader** onto the **Applications** shortcut in the window.
 3. Open it from **Launchpad** or **Spotlight** (press `⌘Space`, type
    "Playlist").
@@ -160,7 +160,11 @@ something, go to the **Settings** tab. The parts that matter most:
   `wav`, or `original` (keep whatever the source gives).
 - **Music → Quality**: `320 kbps (best)` is the default.
 - **Write tags / Embed cover art**: already on. Keep them on.
-- **Download folder**: where files go.
+- **Download folder**: the base folder files go into. You can also set it each
+  time you press **Start** (see [section 5](#5-start-downloading)).
+- **Put a multi-track playlist in its own folder**: when on (the default), a
+  playlist of many songs is saved into a sub-folder named after the playlist.
+  A single video/song is written straight into the folder under its own name.
 
 Press **💾 Save settings** at the bottom of the tab — changes apply only after
 you save.
@@ -171,7 +175,15 @@ See [Settings reference](#10-settings-reference) for every option.
 
 ## 5. Start downloading
 
-Press **▶ Start** in the top-right corner.
+Press **▶ Start** in the top-right corner. The first thing it asks is **where to
+save**, so nothing lands somewhere you didn't expect:
+
+- **Save to folder** — type a path or press **Choose…** to browse for one. Your
+  choice is remembered for next time.
+- **Put a multi-track playlist in its own folder** — tick to save a playlist into
+  a sub-folder named after the playlist (a single song or video is saved directly
+  under its own name). The line underneath previews exactly where files will go.
+- Press **Start download** to begin, or **Cancel** to back out.
 
 While a download is running, the same toolbar shows:
 
@@ -216,7 +228,15 @@ By default, finished files land in:
 ~/Downloads/Playlist Downloader
 ```
 
-Open that folder instantly: **Settings → Where files go → Open folder**.
+**How they are named:** a playlist of many tracks lands in its own sub-folder
+named after the playlist, e.g. `~/Downloads/Playlist Downloader/Rock Classics/`,
+with each song saved as `Artist - Title.mp3` (or `Title.mp4` for video). A single
+video/song — or a playlist with only one item — is written straight into the
+destination folder as `Artist - Title.mp3`, with no extra folder. You choose the
+destination (and whether to use the sub-folder) on the screen that appears when
+you press **Start**, and it is remembered.
+
+Open the folder instantly: **Settings → Where files go → Open folder**.
 
 Tracks that were already downloaded are **skipped** (not downloaded twice), and
 with **Never re-download finished tracks** enabled the app remembers everything
@@ -297,7 +317,8 @@ picks up what's left.
 
 | Setting | Notes |
 | --- | --- |
-| **Download folder** | Where finished files are written. **Open folder** reveals it. |
+| **Download folder** | Base folder where finished files are written. **Open folder** reveals it. |
+| **Put a multi-track playlist in its own folder** | On by default. A playlist of many tracks gets a sub-folder named after it; a single track is written flat under its own name. |
 
 ### Music
 

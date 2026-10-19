@@ -246,6 +246,9 @@ tbody tr.downloading { background: #21253a; }
 
 /* ---------------- modal ---------------- */
 .modal { position: fixed; inset: 0; background: #000000aa; display: grid; place-items: center; z-index: 60; }
+/* The folder browser can be opened from inside the destination modal, so keep
+   it above the other dialogs (equal z-index would let the later one win). */
+#modal { z-index: 70; }
 .modal-box { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); width: min(560px, 92vw); box-shadow: var(--shadow); display: flex; flex-direction: column; max-height: 80vh; }
 .modal-head, .modal-foot { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }
 .modal-head { border-bottom: 1px solid var(--border); }
@@ -254,6 +257,7 @@ tbody tr.downloading { background: #21253a; }
 .modal-list { overflow: auto; padding: 4px 8px 12px; }
 .modal-item { padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 .modal-item:hover { background: var(--bg-elev2); }
+.modal-body { padding: 14px 16px 4px; overflow: auto; }
 
 /* ---------------- quit screen ---------------- */
 .quit-screen { min-height: 100vh; display: grid; place-items: center; }

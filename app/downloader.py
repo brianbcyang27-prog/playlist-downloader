@@ -140,6 +140,7 @@ class DownloadManager:
         self._auto_retry_passes = 0
         self._archive_cache: set[str] | None = None
         self._archive_mtime: float = 0.0
+        self._playlist_cache: dict[int, dict[str, Any]] = {}   # playlist_id -> {name, total}
 
     # -- public state ------------------------------------------------------
     @property
@@ -177,6 +178,7 @@ class DownloadManager:
             self._pause.clear()
             self._running = True
             self._auto_retry_passes = 0
+            self._playlist_cache.clear()
             with self._queue_lock:
                 self._queue = [it["id"] for it in items]
 
@@ -401,7 +403,10 @@ class DownloadManager:
 
     def _find_existing_file(self, item: dict[str, Any]) -> str | None:
         """Look for a file already downloaded under the expected name."""
+        roots = [self._item_folder_path(item)]
         home = self.cfg.download_dir()
+        if roots[0] != home:
+            roots.append(home)          # older runs may have written it flat
         artist = item.get("artist") or ""
         title = item.get("title") or ""
         stems: list[str] = []
@@ -409,13 +414,14 @@ class DownloadManager:
             stems.append(f"{artist} - {title}")
         if title:
             stems.append(title)
-        for stem in stems:
-            safe = sanitize_filename(stem)
-            for ext in (".mp3", ".m4a", ".opus", ".flac", ".wav", ".ogg",
-                        ".mp4", ".mkv", ".webm"):
-                candidate = home / f"{safe}{ext}"
-                if candidate.exists():
-                    return str(candidate)
+        for root in roots:
+            for stem in stems:
+                safe = sanitize_filename(stem)
+                for ext in (".mp3", ".m4a", ".opus", ".flac", ".wav", ".ogg",
+                            ".mp4", ".mkv", ".webm"):
+                    candidate = root / f"{safe}{ext}"
+                    if candidate.exists():
+                        return str(candidate)
         return None
 
     def _recover_archive_skip(self, item: dict[str, Any], info: dict[str, Any],
@@ -672,6 +678,35 @@ class DownloadManager:
         })
 
     # -- yt-dlp options ----------------------------------------------------
+    def _playlist_folder(self, item: dict[str, Any]) -> str:
+        """Sub-folder name for an item's playlist, or ``""`` to write flat.
+
+        A playlist with a single track is really a single file, so it lands
+        straight in the destination under its own name. Anything longer gets a
+        folder named after the playlist, so a big download stays tidy.
+        """
+        if not self.cfg.get("make_playlist_subfolder", True):
+            return ""
+        pid = item.get("playlist_id")
+        if pid is None:
+            return ""
+        with self._lock:
+            cached = self._playlist_cache.get(pid)
+        if cached is None:
+            pl = self.db.get_playlist(pid) or {}
+            cached = {"name": pl.get("name") or "", "total": self.db.count_items(pid)}
+            with self._lock:
+                self._playlist_cache[pid] = cached
+        if cached["total"] <= 1 or not cached["name"]:
+            return ""
+        return sanitize_filename(cached["name"])
+
+    def _item_folder_path(self, item: dict[str, Any]) -> Path:
+        """Destination directory that holds this item (playlist folder applied)."""
+        home = self.cfg.download_dir()
+        folder = self._playlist_folder(item)
+        return home / folder if folder else home
+
     def _build_opts(self, item: dict[str, Any]) -> dict[str, Any]:
         cfg = self.cfg
         item_id = item["id"]
@@ -680,6 +715,11 @@ class DownloadManager:
 
         outtmpl = cfg.get("audio_filename") if is_audio else cfg.get("video_filename")
         outtmpl = self._expand_template(outtmpl, is_audio)
+        # Give a multi-track playlist its own folder (unless the user already
+        # pointed the template at an absolute path).
+        folder = self._playlist_folder(item)
+        if folder and not Path(outtmpl).is_absolute():
+            outtmpl = f"{folder}/{outtmpl}"
 
         opts: dict[str, Any] = {
             "outtmpl": {

@@ -106,7 +106,7 @@ async function loadPlaylists() {
 const BOOL_KEYS = [
   "tag_metadata", "embed_cover_art", "write_cover_file", "rename_to_metadata",
   "use_archive", "skip_existing_files", "resolve_missing_to_youtube",
-  "auto_retry_failed", "dry_run",
+  "auto_retry_failed", "dry_run", "make_playlist_subfolder",
 ];
 const TEXT_KEYS = [
   "download_dir", "audio_format", "audio_quality", "audio_filename",
@@ -340,14 +340,65 @@ async function doImport() {
   }
 }
 
-$("#btn-start").addEventListener("click", async () => {
+/* ------------------------------------------------- download destination UI */
+function destPreview() {
+  const base = $("#dest-path").value.trim() || state.settings?.download_dir || "";
+  const sub = $("#dest-subfolder").checked;
+  const p = state.playlists.find(x => x.id === state.currentPlaylist);
+  const many = !state.currentPlaylist || (p ? (p.total || 0) > 1 : false);
+  if (sub && many) {
+    const name = (state.currentPlaylist && p) ? p.name : "Playlist name";
+    return `Files go to: ${base}/${name}/`;
+  }
+  return `Files go to: ${base}/`;
+}
+
+function openDestModal() {
+  const s = state.settings || {};
+  $("#dest-path").value = s.download_dir || "";
+  $("#dest-subfolder").checked = s.make_playlist_subfolder !== false;
+  $("#dest-preview").textContent = destPreview();
+  $("#dest-modal").hidden = false;
+  $("#dest-go").disabled = false;
+  $("#dest-path").focus();
+}
+function closeDestModal() { $("#dest-modal").hidden = true; }
+
+$("#dest-path").addEventListener("input", () => { $("#dest-preview").textContent = destPreview(); });
+$("#dest-subfolder").addEventListener("change", () => { $("#dest-preview").textContent = destPreview(); });
+$("#dest-cancel").addEventListener("click", closeDestModal);
+$("#dest-close").addEventListener("click", closeDestModal);
+$("#dest-modal").addEventListener("click", e => { if (e.target.id === "dest-modal") closeDestModal(); });
+$("#dest-choose").addEventListener("click", async () => {
+  await openBrowser($("#dest-path").value || "", path => {
+    $("#dest-path").value = path;
+    $("#dest-preview").textContent = destPreview();
+    closeModal();
+  });
+});
+
+$("#btn-start").addEventListener("click", openDestModal);
+$("#dest-go").addEventListener("click", async () => {
+  const dir = $("#dest-path").value.trim();
+  if (!dir) { toast("Pick a folder", "Choose where the files should go.", "warn"); return; }
+  const subfolder = $("#dest-subfolder").checked;
+  $("#dest-go").disabled = true;
   try {
+    const saved = await api("/api/settings", {
+      method: "POST", body: { download_dir: dir, make_playlist_subfolder: subfolder },
+    });
+    state.settings = saved.settings;
     const res = await api("/api/download/start", {
       method: "POST",
       body: { playlist_id: state.currentPlaylist, retry_failed: false },
     });
+    closeDestModal();
     toast("Download started", `${res.queued} items queued across ${res.workers} workers.`, "ok");
-  } catch (e) { toast("Could not start", e.message, "error"); }
+  } catch (e) {
+    toast("Could not start", e.message, "error");
+  } finally {
+    $("#dest-go").disabled = false;
+  }
 });
 $("#btn-pause").addEventListener("click", () => api("/api/download/pause", { method: "POST" }));
 $("#btn-resume").addEventListener("click", () => api("/api/download/resume", { method: "POST" }));

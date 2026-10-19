@@ -173,6 +173,59 @@ def main() -> int:
         _pl.urllib.request.urlopen = real_urlopen
     check("api falls back to /tracks", [t.title for t in legacy] == ["Song 0"], str(legacy))
 
+    print("\n=== output naming (playlist folders) ===")
+    import os as _os
+    import shutil as _shutil
+    import tempfile as _tempfile
+    from pathlib import Path as _Path
+
+    from app.config import Config  # noqa: E402
+    from app.db import QueueDB  # noqa: E402
+    from app.downloader import DownloadManager  # noqa: E402
+    from app.events import EventHub  # noqa: E402
+
+    home = _Path(_tempfile.mkdtemp(prefix="pd-dest-"))
+    prev_home = _os.environ.get("PLAYLIST_DOWNLOADER_HOME")
+    _os.environ["PLAYLIST_DOWNLOADER_HOME"] = str(home)
+    try:
+        cfg = Config(home / "config.json")
+        cfg.update({"download_dir": str(home / "out")})
+        db = QueueDB(home / "queue.db")
+        dm = DownloadManager(cfg, db, EventHub())
+
+        many = db.add_playlist("Rock Classics", "spotify", "u1")
+        db.add_items(many, [{"url": f"ytsearch1:s{i}", "title": f"S{i}", "artist": "A"}
+                            for i in range(3)])
+        solo = db.add_playlist("One Song", "youtube", "u2")
+        db.add_items(solo, [{"url": "https://youtu.be/x", "title": "Solo", "artist": "B"}])
+
+        check("multi-track playlist gets a folder named after it",
+              dm._playlist_folder({"playlist_id": many}) == "Rock Classics")
+        check("single-track playlist stays flat",
+              dm._playlist_folder({"playlist_id": solo}) == "")
+
+        tmpl_many = dm._build_opts(db.get_items(many)[0])["outtmpl"]["default"]
+        check("multi-track outtmpl lands inside the playlist folder",
+              tmpl_many.startswith("Rock Classics/"), tmpl_many)
+        tmpl_solo = dm._build_opts(db.get_items(solo)[0])["outtmpl"]["default"]
+        check("single-track outtmpl has no sub-folder",
+              "/" not in tmpl_solo and "\\" not in tmpl_solo, tmpl_solo)
+
+        cfg.update({"make_playlist_subfolder": False})
+        dm._playlist_cache.clear()
+        check("turning the setting off writes flat again",
+              dm._playlist_folder({"playlist_id": many}) == "")
+        check("flat mode outtmpl has no sub-folder",
+              "/" not in dm._build_opts(db.get_items(many)[0])["outtmpl"]["default"])
+
+        db.close()
+    finally:
+        if prev_home is None:
+            _os.environ.pop("PLAYLIST_DOWNLOADER_HOME", None)
+        else:
+            _os.environ["PLAYLIST_DOWNLOADER_HOME"] = prev_home
+        _shutil.rmtree(home, ignore_errors=True)
+
     print("\n=== scoring ===")
     exact = score("Get Lucky", "Daft Punk", 369, rec("x", title="Get Lucky", artist="Daft Punk", dur=369))
     check("exact match scores high", exact > 0.95, f"got {exact}")

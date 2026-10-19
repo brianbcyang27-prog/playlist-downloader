@@ -42,7 +42,7 @@ func lifecycle(_ message: String) {
     dbg(message)
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
 
     var window: NSWindow!
     var webView: WKWebView!
@@ -117,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         config.websiteDataStore = .default()
         webView = WKWebView(frame: frame, configuration: config)
         webView.navigationDelegate = self
+        webView.uiDelegate = self
         webView.autoresizingMask = [.width, .height]
         if #available(macOS 12.0, *) {
             // Dark backdrop so there is no white flash before the UI paints.
@@ -425,6 +426,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         lifecycle("provisional load failed: \(error.localizedDescription)")
         if !didShowError {
             showError("The interface could not be loaded.\n\n\(error.localizedDescription)")
+        }
+    }
+
+    // MARK: WKUIDelegate
+    //
+    // A WKWebView does not show JavaScript dialogs on its own: without these
+    // methods `confirm()` silently answers "false", so any button that asks
+    // first — Remove playlist, Quit — would appear to do nothing. Bridging them
+    // to NSAlert sheets is what makes those buttons work.
+
+    /// Split a multi-line JS message into an NSAlert title + body.
+    private func alert(for message: String) -> NSAlert {
+        let box = NSAlert()
+        let lines = message.split(separator: "\n", omittingEmptySubsequences: false)
+        box.messageText = lines.first.map(String.init) ?? message
+        let rest = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !rest.isEmpty { box.informativeText = rest }
+        return box
+    }
+
+    private func present(_ box: NSAlert, then done: @escaping (NSApplication.ModalResponse) -> Void) {
+        if let window, window.isVisible {
+            box.beginSheetModal(for: window) { done($0) }
+        } else {
+            done(box.runModal())
+        }
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptAlertPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping () -> Void) {
+        let box = alert(for: message)
+        box.addButton(withTitle: "OK")
+        present(box) { _ in completionHandler() }
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (Bool) -> Void) {
+        let box = alert(for: message)
+        box.addButton(withTitle: "OK")
+        box.addButton(withTitle: "Cancel")
+        present(box) { response in
+            completionHandler(response == .alertFirstButtonReturn)
+        }
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptTextInputPanelWithPrompt prompt: String,
+                 defaultText: String?,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (String?) -> Void) {
+        let box = alert(for: prompt)
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        field.stringValue = defaultText ?? ""
+        box.accessoryView = field
+        box.addButton(withTitle: "OK")
+        box.addButton(withTitle: "Cancel")
+        present(box) { response in
+            completionHandler(response == .alertFirstButtonReturn ? field.stringValue : nil)
         }
     }
 }

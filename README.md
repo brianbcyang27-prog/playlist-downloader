@@ -21,7 +21,7 @@ folder against a playlist to tell you exactly which tracks are missing**.
 **No build required.** Grab the ready-to-run app from the
 **[latest release](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**:
 
-> **[`Playlist.Downloader.1.0.1.dmg`](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**
+> **[`Playlist.Downloader.1.2.dmg`](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**
 > — ≈19 MB, macOS; no Python needed.
 
 1. Open the `.dmg` and drag **Playlist Downloader** into **Applications**.
@@ -48,6 +48,10 @@ Windows users run `scripts\run.bat` from the source tree instead.
 - **Playlist sources**: YouTube / YouTube Music URL, Spotify playlist (with
   optional API credentials for accurate metadata), a plain text file of songs,
   or a local folder.
+- **Choose where files go**, every time. Pressing **Start** asks for a
+  destination folder (remembered for next time). A multi-track playlist is saved
+  into its own folder named after the playlist, while a single video/song is
+  written straight to the destination under its own name.
 - **Full metadata + embedded cover art** on every track (`mutagen`), including
   album art taken from the source when available.
 - **Crash-safe queue** in SQLite (WAL). Close the window mid-download and it
@@ -141,7 +145,7 @@ This produces:
   `WKWebView` (no browser, no terminal), with a normal menu bar, Dock icon and
   `⌘Q`. The app starts the Python backend itself on a free local port, waits for
   it to come up, then loads the UI into its own window.
-- **`dist/Playlist Downloader 1.0.1.dmg`** — drag-to-Applications installer
+- **`dist/Playlist Downloader 1.2.dmg`** — drag-to-Applications installer
   (contains the app plus an `Applications` shortcut).
 - A copy installed to **`~/Applications`**, so it appears in Launchpad and
   Spotlight immediately.
@@ -186,8 +190,11 @@ stderr when launching the binary directly.
    text file, or point at a local music folder.
 2. **Review the tracks.** Everything is listed with its resolved metadata.
 3. **Pick your format** in Settings (audio or video, quality, file naming).
-4. **Start.** Progress streams live over Server-Sent Events. You can pause,
-   resume, stop, retry individual items, or retry every failure at once.
+4. **Choose where to save, then Start.** Pressing **Start** first asks which
+   folder to save into (your last choice is remembered) — multi-track playlists
+   get their own sub-folder named after the playlist. Progress then streams live
+   over Server-Sent Events. You can pause, resume, stop, retry individual items,
+   or retry every failure at once.
 5. **Compare (optional).** Point "Compare" at a folder you already have and the
    app reports **matched**, **missing** (with the closest on-disk file as a
    hint) and **extra** tracks. Missing tracks can be sent straight back into the

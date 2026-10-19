@@ -56,7 +56,8 @@
       el: ".controls",
       title: "5 · Start, pause, stop",
       body:
-        "Press <b>▶ Start</b> to begin downloading. While it runs you also get <b>Pause</b>, " +
+        "Press <b>▶ Start</b> to begin downloading — it first asks <b>where to save</b> and " +
+        "remembers your choice. While a run is going you also get <b>Pause</b>, " +
         "<b>Resume</b> and <b>Stop</b>. <b>↻ Retry failed</b> re-queues everything that errored — " +
         "handy after a dropped connection."
     },
@@ -91,8 +92,9 @@
       el: "#card-where",
       title: "9 · Where your files go",
       body:
-        "Finished tracks land in this folder. Change it here, and use <b>Open folder</b> to " +
-        "jump straight to it in Finder."
+        "Finished tracks land in this folder, and <b>Open folder</b> jumps straight to it in " +
+        "Finder. A playlist of many songs gets its own sub-folder named after the playlist; " +
+        "a single song or video is written under its own name."
     },
     {
       tab: "settings",

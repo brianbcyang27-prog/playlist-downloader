@@ -18,6 +18,10 @@ from . import paths
 DEFAULTS: dict[str, Any] = {
     # Where files land
     "download_dir": str(paths.default_download_dir()),
+    # A multi-track playlist gets its own folder named after the playlist, so a
+    # download never scatters 1,500 files loose in the destination. A single
+    # video/song is written straight into the destination as its own name.
+    "make_playlist_subfolder": True,
 
     # ---- Audio ----
     "audio_format": "mp3",            # mp3 | m4a | opus | flac | wav | original
