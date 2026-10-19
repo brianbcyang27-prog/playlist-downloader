@@ -16,6 +16,30 @@ folder against a playlist to tell you exactly which tracks are missing**.
 
 ---
 
+## ⬇️ Download (macOS)
+
+**No build required.** Grab the ready-to-run app from the
+**[latest release](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**:
+
+> **[`Playlist.Downloader.1.0.0.dmg`](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**
+> — ≈19 MB, macOS; no Python needed.
+
+1. Open the `.dmg` and drag **Playlist Downloader** into **Applications**.
+2. Launch it from Launchpad or Spotlight. On the first open, right-click the app
+   → **Open** → **Open** — it isn't notarized, so macOS asks once.
+3. Install the two helpers it uses for YouTube downloads and audio conversion:
+
+   ```sh
+   brew install ffmpeg deno
+   ```
+
+New to the app? There's a built-in **guided tour** on first launch, and a full
+written walkthrough in **[docs/TUTORIAL.md](docs/TUTORIAL.md)**.
+
+Windows users run `scripts\run.bat` from the source tree instead.
+
+---
+
 ## Highlights
 
 - **Music and video** downloads, with a user-selectable output format
