@@ -112,7 +112,7 @@ def _run_import(ctx: AppContext, job_id: str, source: str, location: str,
     try:
         hub.emit("import_progress", {"job": job_id, "stage": "reading",
                                      "message": f"Reading playlist from {source}…"})
-        name, kind, tracks = pl.fetch_playlist(source, location, ctx.cfg)
+        name, kind, tracks, warning = pl.fetch_playlist(source, location, ctx.cfg)
 
         if not tracks:
             raise ValueError("That playlist appears to be empty.")
@@ -150,10 +150,11 @@ def _run_import(ctx: AppContext, job_id: str, source: str, location: str,
             "job": job_id, "stage": "done",
             "message": f"Imported {total} tracks from “{name}”.",
             "count": total,
+            "warning": warning,
         })
         ctx.jobs.finish(job_id, {
             "playlist_id": playlist_id, "name": name, "source": kind,
-            "count": total,
+            "count": total, "warning": warning,
         })
         hub.emit("playlists_changed", {})
     except Exception as exc:

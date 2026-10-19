@@ -510,6 +510,7 @@ function handleEvent(type, d) {
         $("#import-input").value = "";
         $("#import-hint").textContent = "";
         toast("Imported", d.message, "ok");
+        if (d.warning) toast("Heads up", d.warning, "warn");
         loadPlaylists().then(() => { if (d.job) refreshPlaylistProgress(); });
         setTimeout(() => { if (state.currentPlaylist == null && state.playlists[0]) selectPlaylist(state.playlists[0].id); }, 400);
       } else if (d.stage === "error") {

@@ -20,7 +20,7 @@ RES="$CONTENTS/Resources"
 DISPLAY_NAME="Playlist Downloader"
 BUNDLE_ID="com.brianyang.playlistdownloader"
 EXEC_NAME="PlaylistDownloader"
-VERSION="1.0.0"
+VERSION="1.0.1"
 DIST="$PROJECT_DIR/dist"
 DMG="$DIST/$DISPLAY_NAME $VERSION.dmg"
 

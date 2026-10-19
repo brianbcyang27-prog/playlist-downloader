@@ -146,10 +146,20 @@ def _spotify_spotify_id(url: str) -> str:
     return ""
 
 
+_SPOTIFY_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+# The public embed page lists at most this many tracks and ignores any
+# offset/limit parameter, so there is no way to page through a longer list.
+_SPOTIFY_EMBED_LIMIT = 100
+
+
 def _spotify_embed(playlist_id: str) -> dict | None:
-    """Scrape the public oEmbed/embed JSON — no credentials required."""
+    """Scrape the public embed page's ``__NEXT_DATA__`` — no credentials needed."""
     embed_url = f"https://open.spotify.com/embed/playlist/{playlist_id}"
-    req = urllib.request.Request(embed_url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(embed_url, headers={"User-Agent": _SPOTIFY_UA})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             html = resp.read().decode("utf-8", "ignore")
@@ -163,6 +173,56 @@ def _spotify_embed(playlist_id: str) -> dict | None:
         return json.loads(match.group(1))
     except json.JSONDecodeError:
         return None
+
+
+def _split_artists(subtitle: str) -> list[str]:
+    """The embed packs every artist into one comma-separated ``subtitle``."""
+    clean = (subtitle or "").replace("\u00a0", " ").strip()
+    return [p.strip() for p in clean.split(",") if p.strip()]
+
+
+def _embed_entity(data: dict) -> dict | None:
+    """Locate the playlist entity in the current embed payload shape."""
+    node: object = data
+    for key in ("props", "pageProps", "state", "data", "entity"):
+        if not isinstance(node, dict):
+            return None
+        node = node.get(key)
+    return node if isinstance(node, dict) else None
+
+
+def _tracks_from_entity(entity: dict) -> tuple[str, list[MusicTrack]]:
+    """Read the modern ``entity.trackList`` schema served by the embed page.
+
+    Spotify dropped the old ``__typename`` graph. Tracks now arrive as flat
+    dicts with ``title``, ``subtitle`` (artists), ``duration`` (ms) and ``uri``.
+    The per-track thumbnail is deliberately left unset so the downloader embeds
+    the real song artwork instead of stamping the playlist cover on every file.
+    """
+    name = entity.get("name") or entity.get("title") or "Spotify Playlist"
+    tracks: list[MusicTrack] = []
+    for item in entity.get("trackList") or []:
+        if not isinstance(item, dict):
+            continue
+        uri = item.get("uri") or ""
+        kind = item.get("entityType") or ("track" if uri.startswith("spotify:track:") else "")
+        if kind != "track":
+            continue
+        title = (item.get("title") or "").strip()
+        if not title:
+            continue
+        duration = item.get("duration")
+        tracks.append(
+            MusicTrack(
+                title=title,
+                artist=", ".join(_split_artists(item.get("subtitle") or "")),
+                duration=duration / 1000 if isinstance(duration, (int, float)) and duration else None,
+                track_number=len(tracks) + 1,
+                source="spotify",
+                extra={"spotify_id": uri.rsplit(":", 1)[-1]} if uri.startswith("spotify:track:") else {},
+            )
+        )
+    return name, tracks
 
 
 def _extract_embed_tracks(data: dict) -> tuple[str, list[MusicTrack]]:
@@ -212,7 +272,7 @@ def _extract_embed_tracks(data: dict) -> tuple[str, list[MusicTrack]]:
 
 
 def _spotify_api_tracks(client_id: str, client_secret: str, playlist_id: str) -> tuple[str, list[MusicTrack]]:
-    """Authorized fetch — gives track numbers & full album metadata."""
+    """Authoritative fetch — full playlist, paginated, with album metadata."""
     import base64
 
     auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
@@ -228,27 +288,45 @@ def _spotify_api_tracks(client_id: str, client_secret: str, playlist_id: str) ->
         token = json.loads(resp.read().decode())["access_token"]
 
     headers = {"Authorization": f"Bearer {token}"}
-    tracks: list[MusicTrack] = []
     name = "Spotify Playlist"
-
     with urllib.request.urlopen(
         urllib.request.Request(f"{_SPOTIFY_API}/playlists/{playlist_id}?fields=name", headers=headers), timeout=30
     ) as resp:
         name = json.loads(resp.read().decode()).get("name", name)
 
+    # Spotify renamed this endpoint from /tracks to /items (2024). Try both so
+    # the app keeps working whichever name the account's API answers to.
+    last_error: Exception | None = None
+    for segment in ("items", "tracks"):
+        try:
+            return name, _spotify_page_all(segment, playlist_id, headers)
+        except Exception as exc:  # noqa: BLE001 — fall through to the other name
+            last_error = exc
+    raise last_error or RuntimeError("Spotify rejected the request.")
+
+
+def _spotify_page_all(segment: str, playlist_id: str, headers: dict) -> list[MusicTrack]:
+    """Page through every 100-item chunk of a playlist's tracks."""
+    tracks: list[MusicTrack] = []
     offset = 0
     while True:
-        url = f"{_SPOTIFY_API}/playlists/{playlist_id}/tracks?limit=100&offset={offset}"
+        url = f"{_SPOTIFY_API}/playlists/{playlist_id}/{segment}?limit=100&offset={offset}"
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as resp:
             payload = json.loads(resp.read().decode())
-        for entry in payload.get("items", []):
-            tr = entry.get("track")
-            if not tr or tr.get("is_local"):
+        items = payload.get("items") or []
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            # /items wraps the track as "item"; the older /tracks used "track".
+            tr = entry.get("item") or entry.get("track")
+            if not isinstance(tr, dict) or tr.get("is_local"):
                 continue
             tracks.append(
                 MusicTrack(
                     title=tr.get("name", ""),
-                    artist=", ".join(a["name"] for a in (tr.get("artists") or [])),
+                    artist=", ".join(
+                        a.get("name", "") for a in (tr.get("artists") or []) if isinstance(a, dict)
+                    ),
                     album=(tr.get("album") or {}).get("name", ""),
                     duration=tr.get("duration_ms") / 1000 if tr.get("duration_ms") else None,
                     track_number=tr.get("track_number"),
@@ -256,13 +334,14 @@ def _spotify_api_tracks(client_id: str, client_secret: str, playlist_id: str) ->
                     source="spotify",
                 )
             )
-        if len(payload.get("items", [])) < 100:
+        if len(items) < 100:
             break
         offset += 100
-    return name, tracks
+    return tracks
 
 
-def from_spotify(url: str, cfg) -> tuple[str, list[MusicTrack]]:
+def from_spotify(url: str, cfg) -> tuple[str, list[MusicTrack], str]:
+    """Return ``(name, tracks, warning)`` for a Spotify playlist URL."""
     playlist_id = _spotify_spotify_id(url)
     if not playlist_id:
         raise ValueError("Could not find a Spotify playlist id in that URL.")
@@ -271,9 +350,11 @@ def from_spotify(url: str, cfg) -> tuple[str, list[MusicTrack]]:
     secret = cfg.get("spotify_client_secret") or ""
     if cid and secret:
         try:
-            return _spotify_api_tracks(cid, secret, playlist_id)
+            name, tracks = _spotify_api_tracks(cid, secret, playlist_id)
+            if tracks:
+                return name, tracks, ""
         except Exception:
-            pass  # fall back to embed scrape
+            pass  # fall back to the public embed page
 
     data = _spotify_embed(playlist_id)
     if not data:
@@ -281,10 +362,32 @@ def from_spotify(url: str, cfg) -> tuple[str, list[MusicTrack]]:
             "Could not read the Spotify playlist. Add Spotify API credentials "
             "in Settings (free) for reliable access, or export to a text file."
         )
+
+    # Modern embed payload: props.pageProps.state.data.entity.trackList
+    entity = _embed_entity(data)
+    if entity:
+        name, tracks = _tracks_from_entity(entity)
+        if tracks:
+            warning = ""
+            if len(tracks) >= _SPOTIFY_EMBED_LIMIT:
+                warning = (
+                    f"Spotify's public page only lists the first {_SPOTIFY_EMBED_LIMIT} "
+                    "tracks, so this playlist may be incomplete. Add your free Spotify "
+                    "Client ID & Secret in Settings to import the whole thing."
+                )
+            return name, tracks, warning
+        if entity.get("trackList") is not None:
+            # The page loaded and genuinely listed no playable tracks.
+            raise ValueError("That Spotify playlist appears to be empty.")
+
+    # Older payload shape, kept in case Spotify serves it again.
     name, tracks = _extract_embed_tracks(data)
     if not tracks:
-        raise ValueError("Spotify playlist returned no tracks.")
-    return name, tracks
+        raise ValueError(
+            "Spotify returned a playlist page the app could not read. Add Spotify "
+            "API credentials in Settings (free) for reliable access."
+        )
+    return name, tracks, ""
 
 
 # ---------------------------------------------------------------------------
@@ -405,35 +508,35 @@ def _youtube_name(tracks: list[MusicTrack]) -> str:
     return "YouTube Playlist"
 
 
-def fetch_playlist(source: str, location: str, cfg, progress=None) -> tuple[str, str, list[MusicTrack]]:
-    """Dispatch by source. Returns (name, source, tracks)."""
+def fetch_playlist(source: str, location: str, cfg, progress=None) -> tuple[str, str, list[MusicTrack], str]:
+    """Dispatch by source. Returns (name, source, tracks, warning)."""
     source = source.lower()
     if source in ("youtube", "youtube-search"):
         tracks = from_youtube(location, cfg, progress=None)
-        return _youtube_name(tracks), "youtube", tracks
+        return _youtube_name(tracks), "youtube", tracks, ""
     if source == "spotify":
-        name, tracks = from_spotify(location, cfg)
-        return name, "spotify", tracks
+        name, tracks, warning = from_spotify(location, cfg)
+        return name, "spotify", tracks, warning
     if source in ("file", "text"):
         tracks = from_file(location, cfg)
         name = location.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
-        return name, "file", tracks
+        return name, "file", tracks, ""
     # Auto-detect
     kind = classify_url(location)
     if kind == "youtube":
         tracks = from_youtube(location, cfg)
-        return _youtube_name(tracks), "youtube", tracks
+        return _youtube_name(tracks), "youtube", tracks, ""
     if kind == "spotify":
-        name, tracks = from_spotify(location, cfg)
-        return name, "spotify", tracks
+        name, tracks, warning = from_spotify(location, cfg)
+        return name, "spotify", tracks, warning
     if kind == "unknown" and ("\n" not in location) and __import__("pathlib").Path(
         location
     ).exists():
         tracks = from_file(location, cfg)
         name = location.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
-        return name, "file", tracks
+        return name, "file", tracks, ""
     if kind == "youtube-search":
         return "Search", "youtube-search", [
             MusicTrack(title="YouTube search", url=location, source="youtube-search")
-        ]
+        ], ""
     raise ValueError("Could not detect the playlist source. Paste a YouTube/Spotify link, a text file path, or 'ytsearch:query'.")

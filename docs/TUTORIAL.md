@@ -44,7 +44,7 @@ That's it. Everything below is detail.
 
 ### macOS
 
-1. Open **`Playlist Downloader 1.0.0.dmg`**.
+1. Open **`Playlist Downloader 1.0.1.dmg`**.
 2. Drag **Playlist Downloader** onto the **Applications** shortcut in the window.
 3. Open it from **Launchpad** or **Spotlight** (press `⌘Space`, type
    "Playlist").
@@ -105,6 +105,10 @@ Put it in **Link or file path**:
   ```
   (Also handles `.csv`.) A **local music folder** path works here too.
 - **Local folder** — e.g. `/Users/you/Music/Albums`
+
+> **Spotify note:** without credentials the app reads Spotify's public page, which
+> caps at **100 tracks**. For longer playlists add a free Spotify Client ID/Secret
+> in **Settings** first — see [Settings](#10-settings-reference).
 
 ### Choose Download as
 
@@ -262,6 +266,11 @@ everything.
 
 Downloading 1,500 songs is a long job; these settings make it reliable.
 
+> **Spotify playlists over 100 songs:** add your free Spotify Client ID/Secret in
+> **Settings** before importing. Spotify's public page only lists the first 100
+> tracks, so a 1,500-song playlist would silently import just 100 songs without
+> credentials. YouTube playlists have no such limit.
+
 **Before you start — use Test mode.** In **Settings → Speed & stability**, tick
 **Test mode — resolve tracks, download nothing**. Import your playlist and press
 Start. The app resolves every track without downloading, so you can confirm the
@@ -334,7 +343,7 @@ picks up what's left.
 | **Cookies from browser** | For private / age-restricted / members-only content. |
 | **Proxy** | Optional, e.g. `http://host:port`. |
 | **ffmpeg path** | Only if ffmpeg isn't found automatically. |
-| **Spotify Client ID / Secret** | Optional; free from `developer.spotify.com`. Gives accurate album metadata. Without them, the app still works from the public playlist page. |
+| **Spotify Client ID / Secret** | Recommended for long playlists. Free from `developer.spotify.com`. Without them the app reads Spotify's public page, which only lists the **first 100 tracks**. With them you get the full playlist plus accurate album metadata. |
 | **Search YouTube for Spotify tracks** | Turns Spotify track names into YouTube downloads. |
 
 Most people never need the **Access & networking** card.
@@ -376,8 +385,13 @@ It contains your settings (`config.json`), the queue (`queue.db`), the
 
 **Does it download from Spotify directly?**
 No — Spotify's audio is encrypted. The app reads the Spotify playlist to get the
-track list, then finds and downloads each song from YouTube. Use the optional
-Spotify Client ID/Secret for the most accurate track metadata.
+track list, then finds and downloads each song from YouTube.
+
+**My Spotify playlist only imported 100 songs — why?**
+Spotify's public playlist page only exposes the first **100 tracks**, and there is
+no way around that anonymously. For longer playlists, add a free Spotify Client ID
+and Secret in **Settings** (from `developer.spotify.com`) and the app will page
+through the whole list. Without them, anything past track 100 is unreachable.
 
 **Where do the videos/songs come from?**
 [yt-dlp](https://github.com/yt-dlp/yt-dlp). Only download content you have the

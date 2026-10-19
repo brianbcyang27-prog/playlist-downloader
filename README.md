@@ -21,7 +21,7 @@ folder against a playlist to tell you exactly which tracks are missing**.
 **No build required.** Grab the ready-to-run app from the
 **[latest release](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**:
 
-> **[`Playlist.Downloader.1.0.0.dmg`](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**
+> **[`Playlist.Downloader.1.0.1.dmg`](https://github.com/brianbcyang27-prog/playlist-downloader/releases/latest)**
 > — ≈19 MB, macOS; no Python needed.
 
 1. Open the `.dmg` and drag **Playlist Downloader** into **Applications**.
@@ -141,7 +141,7 @@ This produces:
   `WKWebView` (no browser, no terminal), with a normal menu bar, Dock icon and
   `⌘Q`. The app starts the Python backend itself on a free local port, waits for
   it to come up, then loads the UI into its own window.
-- **`dist/Playlist Downloader 1.0.0.dmg`** — drag-to-Applications installer
+- **`dist/Playlist Downloader 1.0.1.dmg`** — drag-to-Applications installer
   (contains the app plus an `Applications` shortcut).
 - A copy installed to **`~/Applications`**, so it appears in Launchpad and
   Spotlight immediately.
